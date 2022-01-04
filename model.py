@@ -16,10 +16,10 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, q, k, v, mask=None):
-        N = q.size(0)  # batch_size
+        N = q.size(0)        # batch_size
         Q = self.queries(q)  # shape: [N, query_len, embed_dim]
-        K = self.keys(k)  # shape: [N, key_len, embed_dim]
-        V = self.values(v)  # shape: [N, value_len, embed_dim]
+        K = self.keys(k)     # shape: [N, key_len, embed_dim]
+        V = self.values(v)   # shape: [N, value_len, embed_dim]
 
         Q = Q.view(N, -1, self.n_heads, self.head_dim).permute(0, 2, 1, 3)  # shape: [N, n_heads, query_len, head_dim]
         K = K.view(N, -1, self.n_heads, self.head_dim).permute(0, 2, 1, 3)  # shape: [N, n_heads, key_len, head_dim]
@@ -29,10 +29,10 @@ class MultiHeadAttention(nn.Module):
         if mask is not None:
             energy = energy.masked_fill(mask == 0, -1e20)
 
-        attention = energy.softmax(-1)  # shape: [N, n_heads, query_len, key_len]
-        x = self.dropout(attention) @ V  # shape: [N, n_heads, query_len, key_len]
+        attention = energy.softmax(-1)          # shape: [N, n_heads, query_len, key_len]
+        x = self.dropout(attention) @ V         # shape: [N, n_heads, query_len, key_len]
         x = x.permute(0, 2, 1, 3).contiguous()  # shape: [N, n_heads, query_len, head_dim]
-        x = x.view(N, -1, self.embed_dim)  # shape: [N, query_len, embed_dim]
+        x = x.view(N, -1, self.embed_dim)       # shape: [N, query_len, embed_dim]
         x = self.proj(x)
 
         return x
@@ -131,10 +131,35 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, encoder, decoder, src_pad_idx, trg_pad_idx, device):
+    def __init__(self,
+                 src_vocab_size,
+                 trg_vocab_size,
+                 src_pad_idx,
+                 trg_pad_idx,
+                 embed_dim,
+                 n_blocks,
+                 n_heads,
+                 mlp_expansion_dim,
+                 max_length,
+                 dropout,
+                 device):
         super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
+        self.encoder = Encoder(src_vocab_size,
+                               embed_dim,
+                               n_blocks,
+                               n_heads,
+                               mlp_expansion_dim,
+                               max_length,
+                               dropout,
+                               device)
+        self.decoder = Decoder(trg_vocab_size,
+                               embed_dim,
+                               n_blocks,
+                               n_heads,
+                               mlp_expansion_dim,
+                               max_length,
+                               dropout,
+                               device)
         self.src_pad_idx = src_pad_idx
         self.trg_pad_idx = trg_pad_idx
         self.device = device
@@ -175,9 +200,18 @@ if __name__ == "__main__":
     src_vocab_size = 10
     trg_vocab_size = 10
 
-    encoder = Encoder(src_vocab_size, embed_dim, n_blocks, n_heads, mlp_expansion_dim, max_length, dropout, device)
-    decoder = Decoder(trg_vocab_size, embed_dim, n_blocks, n_heads, mlp_expansion_dim, max_length, dropout, device)
-    model = Transformer(encoder, decoder, src_pad_idx, trg_pad_idx, device).to(device)
+    model = Transformer(src_vocab_size,
+                        trg_vocab_size,
+                        src_pad_idx,
+                        trg_pad_idx,
+                        embed_dim,
+                        n_blocks,
+                        n_heads,
+                        mlp_expansion_dim,
+                        max_length,
+                        dropout,
+                        device).to(device)
+
     out = model(src, trg[:, :-1])
 
     print(out.shape)
