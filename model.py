@@ -212,6 +212,6 @@ if __name__ == "__main__":
                         dropout,
                         device).to(device)
 
-    out = model(src, trg[:, :-1])
+    out = model(src, trg)
 
     print(out.shape)
