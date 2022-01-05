@@ -2,6 +2,57 @@ import torch
 import torch.nn as nn
 
 
+class Transformer(nn.Module):
+    def __init__(self,
+                 src_vocab_size,
+                 trg_vocab_size,
+                 src_pad_idx,
+                 trg_pad_idx,
+                 embed_dim,
+                 n_blocks,
+                 n_heads,
+                 mlp_expansion_dim,
+                 max_length,
+                 dropout,
+                 device):
+        super().__init__()
+        self.encoder = Encoder(src_vocab_size,
+                               embed_dim,
+                               n_blocks,
+                               n_heads,
+                               mlp_expansion_dim,
+                               max_length,
+                               dropout,
+                               device)
+        self.decoder = Decoder(trg_vocab_size,
+                               embed_dim,
+                               n_blocks,
+                               n_heads,
+                               mlp_expansion_dim,
+                               max_length,
+                               dropout,
+                               device)
+        self.src_pad_idx = src_pad_idx
+        self.trg_pad_idx = trg_pad_idx
+        self.device = device
+
+    def src_mask(self, src):
+        src_mask = (src != self.src_pad_idx).unsqueeze(1).unsqueeze(2)
+        return src_mask.to(self.device)
+
+    def trg_mask(self, trg):
+        N, trg_len = trg.shape
+        trg_mask = torch.tril(torch.ones((trg_len, trg_len))).expand(N, 1, trg_len, trg_len)
+        return trg_mask.to(self.device)
+
+    def forward(self, src, trg):
+        src_mask = self.src_mask(src)
+        trg_mask = self.trg_mask(trg)
+        encoded = self.encoder(src, src_mask)
+        decoded = self.decoder(trg, encoded, trg_mask, src_mask)
+        return decoded
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, embed_dim, n_heads, dropout):
         super().__init__()
@@ -130,64 +181,9 @@ class Decoder(nn.Module):
         return output
 
 
-class Transformer(nn.Module):
-    def __init__(self,
-                 src_vocab_size,
-                 trg_vocab_size,
-                 src_pad_idx,
-                 trg_pad_idx,
-                 embed_dim,
-                 n_blocks,
-                 n_heads,
-                 mlp_expansion_dim,
-                 max_length,
-                 dropout,
-                 device):
-        super().__init__()
-        self.encoder = Encoder(src_vocab_size,
-                               embed_dim,
-                               n_blocks,
-                               n_heads,
-                               mlp_expansion_dim,
-                               max_length,
-                               dropout,
-                               device)
-        self.decoder = Decoder(trg_vocab_size,
-                               embed_dim,
-                               n_blocks,
-                               n_heads,
-                               mlp_expansion_dim,
-                               max_length,
-                               dropout,
-                               device)
-        self.src_pad_idx = src_pad_idx
-        self.trg_pad_idx = trg_pad_idx
-        self.device = device
-
-    def src_mask(self, src):
-        src_mask = (src != self.src_pad_idx).unsqueeze(1).unsqueeze(2)
-        return src_mask.to(self.device)
-
-    def trg_mask(self, trg):
-        N, trg_len = trg.shape
-        trg_mask = torch.tril(torch.ones((trg_len, trg_len))).expand(N, 1, trg_len, trg_len)
-        return trg_mask.to(self.device)
-
-    def forward(self, src, trg):
-        src_mask = self.src_mask(src)
-        trg_mask = self.trg_mask(trg)
-        encoded = self.encoder(src, src_mask)
-        decoded = self.decoder(trg, encoded, trg_mask, src_mask)
-        return decoded
-
-
 if __name__ == "__main__":
     torch.random.manual_seed(42)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
-
-    src = torch.tensor([[1, 5, 6, 4, 3, 9, 5, 2, 0], [1, 8, 7, 3, 4, 5, 6, 7, 2]]).to(device)
-    trg = torch.tensor([[1, 7, 4, 3, 5, 9, 2, 0], [1, 5, 6, 2, 4, 7, 6, 2]]).to(device)
 
     n_blocks = 6
     embed_dim = 512
@@ -197,8 +193,12 @@ if __name__ == "__main__":
     dropout = 0
     src_pad_idx = 0
     trg_pad_idx = 0
-    src_vocab_size = 10
-    trg_vocab_size = 10
+    trg_vocab_size = 20
+    src_vocab_size = 20
+
+    src = torch.randint(1, 20, size=(1, 10)).to(device)
+    trg = torch.randint(1, 20, size=(1, 10)).to(device)
+    print(f'source: {src.cpu().numpy().tolist()}\ntarget: {trg.cpu().numpy().tolist()}')
 
     model = Transformer(src_vocab_size,
                         trg_vocab_size,
@@ -213,5 +213,5 @@ if __name__ == "__main__":
                         device).to(device)
 
     out = model(src, trg)
-
-    print(out.shape)
+    print(f'output shape: {out.shape}')
+    print(f'output: {out.detach().cpu().numpy().tolist()}')
