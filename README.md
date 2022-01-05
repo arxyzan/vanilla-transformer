@@ -6,5 +6,6 @@ My PyTorch implementation of the original Transformer model from the paper [Atte
 - [The Original Transformer (PyTorch) by Aleksa Gordic](https://github.com/gordicaleksa/pytorch-original-transformer)
 - [Attention is all you need from scratch by Aladdin Persson](https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/more_advanced/Seq2Seq_attention/seq2seq_attention.py)
 - [PyTorch Seq2Seq by Ben Trevett](https://github.com/bentrevett/pytorch-seq2seq)
-- And probably a couple more which I don't remember ...
+
+And probably a couple more which I don't remember ...
 
