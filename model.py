@@ -135,9 +135,9 @@ class Encoder(nn.Module):
 class DecoderLayer(nn.Module):
     def __init__(self, embed_dim, n_heads, mlp_expansion_dim, dropout):
         super().__init__()
-        self.self_attention = MultiHeadAttention(embed_dim, n_heads, dropout)
+        self.self_attention = MultiHeadAttention(embed_dim, n_heads, dropout)    # decoder self-attention
         self.norm1 = nn.LayerNorm(embed_dim)
-        self.joint_attention = MultiHeadAttention(embed_dim, n_heads, dropout)
+        self.joint_attention = MultiHeadAttention(embed_dim, n_heads, dropout)   # encoder-decoder attention
         self.norm2 = nn.LayerNorm(embed_dim)
         self.mlp = nn.Sequential(
             nn.Linear(embed_dim, mlp_expansion_dim * embed_dim),
