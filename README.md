@@ -6,6 +6,8 @@ My PyTorch implementation of the original Transformer model from the paper [Atte
 - [The Original Transformer (PyTorch) by Aleksa Gordic](https://github.com/gordicaleksa/pytorch-original-transformer)
 - [Attention is all you need from scratch by Aladdin Persson](https://github.com/aladdinpersson/Machine-Learning-Collection/blob/master/ML/Pytorch/more_advanced/Seq2Seq_attention/seq2seq_attention.py)
 - [PyTorch Seq2Seq by Ben Trevett](https://github.com/bentrevett/pytorch-seq2seq)
+- [Transformers: Attention in Disguise by Mihail Eric](https://www.mihaileric.com/posts/transformers-attention-in-disguise/)
+- [The Annotated Transformer by Harvard NLP](http://nlp.seas.harvard.edu/2018/04/03/attention.html)
 
 And probably a couple more which I don't remember ...
 
