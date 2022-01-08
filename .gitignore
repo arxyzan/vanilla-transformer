@@ -125,3 +125,5 @@ bank_card/results
 bank_card/cards
 
 weights/
+logs/
+.data/
