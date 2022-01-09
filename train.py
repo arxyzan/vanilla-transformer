@@ -1,24 +1,16 @@
 import os
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-import torchtext
-from torchtext.legacy.datasets import Multi30k
-from torchtext.legacy.data import Field, BucketIterator
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-
-import spacy
-import numpy as np
+import torch
 from tqdm import tqdm
-
-import random
-import math
-import time
+from functools import partial
 
 from model import Transformer
 from utils import AverageMeter
 from config import config
+from dataset import TranslationDataset, collate_fn
 
 
 class Trainer:
@@ -37,7 +29,6 @@ class Trainer:
         self.src_pad_idx = config['src_pad_idx']
         self.trg_pad_idx = config['trg_pad_idx']
         self.lr = config['lr']
-        self.grad_clip = config['grad_clip']
         # Model
         self.model = Transformer(self.src_vocab_size,
                                  self.trg_vocab_size,
@@ -50,6 +41,7 @@ class Trainer:
                                  self.max_length,
                                  self.dropout,
                                  self.device)
+        self._init_weights()
         self.model.to(self.device)
 
         # Optimizer
@@ -65,25 +57,29 @@ class Trainer:
         log_dir = os.path.join(self.config['log_dir'], self.config['name'])
         self.writer = SummaryWriter(log_dir=log_dir)
 
+    def _init_weights(self):
+        for name, param in self.model.named_parameters():
+            if 'weight' in name:
+                nn.init.normal_(param.data, mean=0, std=0.01)
+            else:
+                nn.init.constant_(param.data, 0)
+
     def train(self, dataloader, epoch, total_epochs):
         self.model.train()
         self.loss_tracker.reset()
         with tqdm(dataloader, unit="batch", desc=f'Epoch: {epoch}/{total_epochs} ',
                   bar_format='{desc:<16}{percentage:3.0f}%|{bar:70}{r_bar}', ascii=" #") as iterator:
-            for batch in iterator:
-                src = batch.src
-                trg = batch.trg
-
-                self.optimizer.zero_grad()
+            for src, trg in iterator:
+                src, trg = src.to(self.device), trg.to(self.device)
                 output = self.model(src, trg[:, :-1])
-                output_dim = output[-1]
+                output_dim = output.shape[-1]
                 output = output.contiguous().view(-1, output_dim)
                 trg = trg[:, 1:].contiguous().view(-1)
 
                 loss = self.criterion(output, trg)
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                 self.optimizer.step()
+                self.optimizer.zero_grad()
 
                 self.loss_tracker.update(loss.item())
                 avg_loss = self.loss_tracker.avg
@@ -95,21 +91,18 @@ class Trainer:
         self.loss_tracker.reset()
         with tqdm(dataloader, unit="batch", desc=f'Evaluating... ',
                   bar_format='{desc:<16}{percentage:3.0f}%|{bar:70}{r_bar}', ascii=" #") as iterator:
-            for i, batch in enumerate(iterator):
-                src = batch.src
-                trg = batch.trg
+            with torch.no_grad():
+                for src, trg in iterator:
+                    src, trg = src.to(self.device), trg.to(self.device)
+                    output = self.model(src, trg[:, :-1])
+                    output_dim = output.shape[-1]
+                    output = output.contiguous().view(-1, output_dim)
+                    trg = trg[:, 1:].contiguous().view(-1)
 
-                output = self.model(src, trg[:, :-1])
-
-                output_dim = output.shape[-1]
-
-                output = output.contiguous().view(-1, output_dim)
-                trg = trg[:, 1:].contiguous().view(-1)
-
-                loss = self.criterion(output, trg)
-                self.loss_tracker.update(loss.item())
-                avg_loss = self.loss_tracker.avg
-                iterator.set_postfix(loss=avg_loss)
+                    loss = self.criterion(output, trg)
+                    self.loss_tracker.update(loss.item())
+                    avg_loss = self.loss_tracker.avg
+                    iterator.set_postfix(loss=avg_loss)
         return avg_loss
 
     def fit(self, train_loader, valid_loader, epochs):
@@ -130,7 +123,41 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    train_loader = ...
-    valid_loader = ...
+    base_url = config['base_url']
+    train_urls = config['train_urls']
+    val_urls = config['val_urls']
+    test_urls = config['test_urls']
+    batch_size = config['train_batch_size']
+
+    train_dataset = TranslationDataset(base_url, train_urls)
+    val_dataset = TranslationDataset(base_url, val_urls)
+    test_dataset = TranslationDataset(base_url, test_urls)
+
+    train_loader = DataLoader(train_dataset,
+                              batch_size=batch_size,
+                              shuffle=True,
+                              collate_fn=partial(collate_fn,
+                                                 bos_idx=train_dataset.BOS_IDX,
+                                                 eos_idx=train_dataset.EOS_IDX,
+                                                 pad_idx=train_dataset.PAD_IDX))
+    valid_loader = DataLoader(val_dataset,
+                              batch_size=batch_size,
+                              shuffle=True,
+                              collate_fn=partial(collate_fn,
+                                                 bos_idx=val_dataset.BOS_IDX,
+                                                 eos_idx=val_dataset.EOS_IDX,
+                                                 pad_idx=val_dataset.PAD_IDX))
+    test_loader = DataLoader(val_dataset,
+                             batch_size=batch_size,
+                             collate_fn=partial(collate_fn,
+                                                bos_idx=test_dataset.BOS_IDX,
+                                                eos_idx=test_dataset.EOS_IDX,
+                                                pad_idx=test_dataset.PAD_IDX))
+
+    config['src_vocab_size'] = len(train_dataset.de_vocab)
+    config['trg_vocab_size'] = len(train_dataset.en_vocab)
+    config['src_pad_idx'] = train_dataset.en_vocab['<pad>']
+    config['trg_pad_idx'] = train_dataset.de_vocab['<pad>']
     trainer = Trainer(config)
     trainer.fit(train_loader, valid_loader, config['epochs'])
+    # trainer.evaluate(valid_loader)
