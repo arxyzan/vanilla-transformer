@@ -117,7 +117,7 @@ class Trainer:
 
             should_save_weights = lambda x: not bool(x % self.config['save_interval'])
             if should_save_weights(epoch):
-                save_path = os.path.join(self.config['weights_dir'], f'{epoch}_{val_loss}.pt')
+                save_path = os.path.join(self.config['weights_dir'], f'{epoch}.pt')
                 torch.save(self.model.state_dict(), save_path)
                 print(f'Saved Model at {save_path}')
 

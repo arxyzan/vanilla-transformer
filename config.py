@@ -7,7 +7,6 @@ config = {
     'dropout': 0.1,
     'max_length': 100,
     'device': 'cuda',
-    'grad_clip': 1,
     'lr': 0.0005,
     'log_dir': 'logs',
     'weights_dir': 'weights',
