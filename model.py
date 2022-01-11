@@ -11,7 +11,7 @@ class Transformer(nn.Module):
                  embed_dim,
                  n_blocks,
                  n_heads,
-                 mlp_expansion_dim,
+                 ff_hid_dim,
                  max_length,
                  dropout,
                  device):
@@ -20,7 +20,7 @@ class Transformer(nn.Module):
                                embed_dim,
                                n_blocks,
                                n_heads,
-                               mlp_expansion_dim,
+                               ff_hid_dim,
                                max_length,
                                dropout,
                                device)
@@ -28,7 +28,7 @@ class Transformer(nn.Module):
                                embed_dim,
                                n_blocks,
                                n_heads,
-                               mlp_expansion_dim,
+                               ff_hid_dim,
                                max_length,
                                dropout,
                                device)
@@ -90,15 +90,15 @@ class MultiHeadAttention(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, embed_dim, n_heads, mlp_expansion_dim, dropout):
+    def __init__(self, embed_dim, n_heads, ff_hid_dim, dropout):
         super().__init__()
         self.norm1 = nn.LayerNorm(embed_dim)
         self.norm2 = nn.LayerNorm(embed_dim)
         self.attention = MultiHeadAttention(embed_dim, n_heads, dropout)
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim, mlp_expansion_dim * embed_dim),
+            nn.Linear(embed_dim, ff_hid_dim * embed_dim),
             nn.ReLU(),
-            nn.Linear(mlp_expansion_dim * embed_dim, embed_dim)
+            nn.Linear(ff_hid_dim * embed_dim, embed_dim)
         )
         self.dropout = nn.Dropout(dropout)
 
@@ -111,12 +111,12 @@ class EncoderLayer(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, vocab_size, embed_dim, n_blocks, n_heads, mlp_expansion_dim, max_length, dropout, device):
+    def __init__(self, vocab_size, embed_dim, n_blocks, n_heads, ff_hid_dim, max_length, dropout, device):
         super().__init__()
         self.device = device
         self.tok_emb = nn.Embedding(vocab_size, embed_dim)
         self.pos_emb = nn.Embedding(max_length, embed_dim)
-        self.blocks = nn.ModuleList([EncoderLayer(embed_dim, n_heads, mlp_expansion_dim, dropout)] * n_blocks)
+        self.blocks = nn.ModuleList([EncoderLayer(embed_dim, n_heads, ff_hid_dim, dropout)] * n_blocks)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, src, mask):
@@ -133,16 +133,16 @@ class Encoder(nn.Module):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, embed_dim, n_heads, mlp_expansion_dim, dropout):
+    def __init__(self, embed_dim, n_heads, ff_hid_dim, dropout):
         super().__init__()
         self.self_attention = MultiHeadAttention(embed_dim, n_heads, dropout)    # decoder self-attention
         self.norm1 = nn.LayerNorm(embed_dim)
         self.joint_attention = MultiHeadAttention(embed_dim, n_heads, dropout)   # encoder-decoder attention
         self.norm2 = nn.LayerNorm(embed_dim)
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim, mlp_expansion_dim * embed_dim),
+            nn.Linear(embed_dim, ff_hid_dim * embed_dim),
             nn.ReLU(),
-            nn.Linear(mlp_expansion_dim * embed_dim, embed_dim)
+            nn.Linear(ff_hid_dim * embed_dim, embed_dim)
         )
         self.norm3 = nn.LayerNorm(embed_dim)
         self.dropout = nn.Dropout(dropout)
@@ -158,13 +158,13 @@ class DecoderLayer(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, vocab_size, embed_dim, n_blocks, n_heads, mlp_expansion_dim, max_length, dropout, device):
+    def __init__(self, vocab_size, embed_dim, n_blocks, n_heads, ff_hid_dim, max_length, dropout, device):
         super().__init__()
         self.device = device
         self.tok_embedding = nn.Embedding(vocab_size, embed_dim)
         self.pos_embedding = nn.Embedding(max_length, embed_dim)
         self.dropout = nn.Dropout(dropout)
-        self.blocks = nn.ModuleList([DecoderLayer(embed_dim, n_heads, mlp_expansion_dim, dropout)] * n_blocks)
+        self.blocks = nn.ModuleList([DecoderLayer(embed_dim, n_heads, ff_hid_dim, dropout)] * n_blocks)
         self.fc = nn.Linear(embed_dim, vocab_size)
 
     def forward(self, trg, src, trg_mask, src_mask):
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     n_blocks = 6
     embed_dim = 512
     n_heads = 8
-    mlp_expansion_dim = 4
+    ff_hid_dim = 4
     max_length = 100
     dropout = 0
     src_pad_idx = 0
@@ -207,7 +207,7 @@ if __name__ == "__main__":
                         embed_dim,
                         n_blocks,
                         n_heads,
-                        mlp_expansion_dim,
+                        ff_hid_dim,
                         max_length,
                         dropout,
                         device).to(device)

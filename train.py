@@ -6,11 +6,19 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 from tqdm import tqdm
 from functools import partial
+import numpy as np
+import random
 
 from model import Transformer
 from utils import AverageMeter
 from config import config
-from dataset import TranslationDataset, collate_fn
+from dataset import Multi30kDe2En
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
+torch.backends.cudnn.deterministic = True
 
 
 class Trainer:
@@ -19,7 +27,7 @@ class Trainer:
         self.config = config
         self.src_vocab_size = config['src_vocab_size']
         self.trg_vocab_size = config['trg_vocab_size']
-        self.mlp_expansion_dim = config['mlp_expansion_dim']
+        self.ff_hid_dim = config['ff_hid_dim']
         self.embed_dim = config['embed_dim']
         self.n_blocks = config['n_blocks']
         self.n_heads = config['n_heads']
@@ -29,6 +37,7 @@ class Trainer:
         self.src_pad_idx = config['src_pad_idx']
         self.trg_pad_idx = config['trg_pad_idx']
         self.lr = config['lr']
+        self.clip = config['clip']
         # Model
         self.model = Transformer(self.src_vocab_size,
                                  self.trg_vocab_size,
@@ -37,7 +46,7 @@ class Trainer:
                                  self.embed_dim,
                                  self.n_blocks,
                                  self.n_heads,
-                                 self.mlp_expansion_dim,
+                                 self.ff_hid_dim,
                                  self.max_length,
                                  self.dropout,
                                  self.device)
@@ -78,6 +87,7 @@ class Trainer:
 
                 loss = self.criterion(output, trg)
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
@@ -129,35 +139,26 @@ if __name__ == '__main__':
     test_urls = config['test_urls']
     batch_size = config['train_batch_size']
 
-    train_dataset = TranslationDataset(base_url, train_urls)
-    val_dataset = TranslationDataset(base_url, val_urls)
-    test_dataset = TranslationDataset(base_url, test_urls)
+    train_dataset = Multi30kDe2En(base_url, train_urls)
+    val_dataset = Multi30kDe2En(base_url, val_urls)
+    test_dataset = Multi30kDe2En(base_url, test_urls)
 
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
                               shuffle=True,
-                              collate_fn=partial(collate_fn,
-                                                 bos_idx=train_dataset.BOS_IDX,
-                                                 eos_idx=train_dataset.EOS_IDX,
-                                                 pad_idx=train_dataset.PAD_IDX))
+                              collate_fn=Multi30kDe2En.collate_fn)
     valid_loader = DataLoader(val_dataset,
                               batch_size=batch_size,
                               shuffle=True,
-                              collate_fn=partial(collate_fn,
-                                                 bos_idx=val_dataset.BOS_IDX,
-                                                 eos_idx=val_dataset.EOS_IDX,
-                                                 pad_idx=val_dataset.PAD_IDX))
+                              collate_fn=Multi30kDe2En.collate_fn)
     test_loader = DataLoader(val_dataset,
                              batch_size=batch_size,
-                             collate_fn=partial(collate_fn,
-                                                bos_idx=test_dataset.BOS_IDX,
-                                                eos_idx=test_dataset.EOS_IDX,
-                                                pad_idx=test_dataset.PAD_IDX))
+                             collate_fn=Multi30kDe2En.collate_fn)
 
     config['src_vocab_size'] = len(train_dataset.de_vocab)
     config['trg_vocab_size'] = len(train_dataset.en_vocab)
-    config['src_pad_idx'] = train_dataset.en_vocab['<pad>']
-    config['trg_pad_idx'] = train_dataset.de_vocab['<pad>']
+    config['src_pad_idx'] = Multi30kDe2En.PAD_IDX
+    config['trg_pad_idx'] = Multi30kDe2En.PAD_IDX
     trainer = Trainer(config)
     trainer.fit(train_loader, valid_loader, config['epochs'])
     # trainer.evaluate(valid_loader)
