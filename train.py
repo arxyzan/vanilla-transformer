@@ -5,7 +5,6 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torch
 from tqdm import tqdm
-from functools import partial
 import numpy as np
 import random
 

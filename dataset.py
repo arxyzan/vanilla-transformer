@@ -19,8 +19,8 @@ class Multi30kDe2En(Dataset):
         self.de_tokenizer = get_tokenizer('spacy', language='de_core_news_sm')
         self.en_tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
         self.de_vocab, self.en_vocab = self._load_vocabs()
-        self.de_texts = list((io.open(self.paths[0], encoding="utf8")))
-        self.en_texts = list((io.open(self.paths[1], encoding="utf8")))
+        self.de_texts = list(io.open(self.paths[0], encoding="utf8"))
+        self.en_texts = list(io.open(self.paths[1], encoding="utf8"))
 
     def __len__(self):
         return len(self.en_texts)
@@ -42,8 +42,8 @@ class Multi30kDe2En(Dataset):
                                              specials=self.SPECIAL_SYMBOLS)
         en_vocab = build_vocab_from_iterator(yield_tokens(self.paths[1], self.en_tokenizer),
                                              specials=self.SPECIAL_SYMBOLS)
-        de_vocab.set_default_index(de_vocab["<unk>"])
-        en_vocab.set_default_index(en_vocab["<unk>"])
+        de_vocab.set_default_index(self.UNK_IDX)
+        en_vocab.set_default_index(self.UNK_IDX)
 
         return de_vocab, en_vocab
 
@@ -60,11 +60,10 @@ class Multi30kDe2En(Dataset):
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
-    from functools import partial
 
     base_url = 'https://raw.githubusercontent.com/multi30k/dataset/master/data/task1/raw/'
-    urls = ('val.de.gz', 'val.en.gz')
+    urls = ('train.de.gz', 'train.en.gz')
     dataset = Multi30kDe2En(base_url, urls)
     dataloader = DataLoader(dataset, batch_size=16, collate_fn=Multi30kDe2En.collate_fn)
-    batch = next(iter(dataloader))
+    de_batch, en_batch = next(iter(dataloader))
     print('done')
