@@ -161,4 +161,3 @@ if __name__ == '__main__':
     config['trg_pad_idx'] = Multi30kDe2En.PAD_IDX
     trainer = Trainer(config)
     trainer.fit(train_loader, valid_loader, config['epochs'])
-    # trainer.evaluate(valid_loader)
