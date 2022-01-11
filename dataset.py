@@ -18,9 +18,11 @@ class Multi30kDe2En(Dataset):
         self.paths = [extract_archive(download_from_url(self.base_url + url))[0] for url in self.urls]
         self.de_tokenizer = get_tokenizer('spacy', language='de_core_news_sm')
         self.en_tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
-        self.de_vocab, self.en_vocab = self._load_vocabs()
         self.de_texts = list(io.open(self.paths[0], encoding="utf8"))
         self.en_texts = list(io.open(self.paths[1], encoding="utf8"))
+        self.de_tokens = [self.de_tokenizer(text) for text in self.de_texts]
+        self.en_tokens = [self.en_tokenizer(text) for text in self.en_texts]
+        self.de_vocab, self.en_vocab = self._load_vocabs()
 
     def __len__(self):
         return len(self.en_texts)
@@ -33,15 +35,8 @@ class Multi30kDe2En(Dataset):
         return de_tensor, en_tensor
 
     def _load_vocabs(self):
-        def yield_tokens(filepath, tokenizer):
-            with io.open(filepath, encoding='utf8') as f:
-                for text in f:
-                    yield tokenizer(text)
-
-        de_vocab = build_vocab_from_iterator(yield_tokens(self.paths[0], self.de_tokenizer),
-                                             specials=self.SPECIAL_SYMBOLS)
-        en_vocab = build_vocab_from_iterator(yield_tokens(self.paths[1], self.en_tokenizer),
-                                             specials=self.SPECIAL_SYMBOLS)
+        de_vocab = build_vocab_from_iterator(iter(self.de_tokens), specials=self.SPECIAL_SYMBOLS)
+        en_vocab = build_vocab_from_iterator(iter(self.en_tokens), specials=self.SPECIAL_SYMBOLS)
         de_vocab.set_default_index(self.UNK_IDX)
         en_vocab.set_default_index(self.UNK_IDX)
 
@@ -65,5 +60,5 @@ if __name__ == '__main__':
     urls = ('train.de.gz', 'train.en.gz')
     dataset = Multi30kDe2En(base_url, urls)
     dataloader = DataLoader(dataset, batch_size=16, collate_fn=Multi30kDe2En.collate_fn)
-    de_batch, en_batch = next(iter(dataloader))
+    de, en = next(iter(dataloader))
     print('done')
