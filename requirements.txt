@@ -1,4 +1,4 @@
-pytorch=1.10.1
-torchtext=0.11.1
+pytorch>=1.10.1
+torchtext>=0.10.0
 spacy
 tqdm
