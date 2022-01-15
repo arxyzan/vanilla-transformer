@@ -30,7 +30,7 @@ python train.py
 **Note:** _This code uses Torchtext's new API (v0.10.0+) and the `dataset.py` contains a custom text dataset class inherited from `torch.utils.data.Dataset` and is different from the classic methods using `Field` and `BucketIterator` (which are now moved to `torchtext.legacy`). Nevertheless `torchtext` library is still under heavy development so this code will probably break with the upcoming versions._
 
 ### TODO
-- `predict.py` for inference
-- visualize attentions
-- add docstrings
-- an in-depth notebook
+- [x] `predict.py` for inference
+- [ ] visualize attentions
+- [ ] add docstrings
+- [ ] an in-depth notebook
