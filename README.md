@@ -1,5 +1,5 @@
 ## Vanilla Transformer (PyTorch)
-My PyTorch implementation of the original Transformer model from the paper [Attention Is All You Need](https://arxiv.org/abs/1706.03762) inspired by all the codes and blogs I've read on this topic. There's nothing really special going on here except the fact that I tried to make it as barebone as possible. There is also a training code prepared for a simple EN/DE translator written in pure PyTorch using Torchtext library.
+My PyTorch implementation of the original Transformer model from the paper [Attention Is All You Need](https://arxiv.org/abs/1706.03762) inspired by all the codes and blogs I've read on this topic. There's nothing really special going on here except the fact that I tried to make it as barebone as possible. There is also a training code prepared for a simple German -> English translator written in pure PyTorch using Torchtext library.
 
 ### My Inspirations
 - [The Illustrated Transformer by Jay Alammar](https://jalammar.github.io/illustrated-transformer/)
