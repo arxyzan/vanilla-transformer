@@ -14,7 +14,7 @@ config = {
     'save_interval': 1,
     'base_url': 'https://raw.githubusercontent.com/multi30k/dataset/master/data/task1/raw/',
     'train_urls': ('train.de.gz', 'train.en.gz'),
-    'val_urls': ('val.de.gz', 'val.en.gz'),
+    'valid_urls': ('val.de.gz', 'val.en.gz'),
     'test_urls': ('test_2016_flickr.de.gz', 'test_2016_flickr.en.gz'),
     'train_batch_size': 16,
     'val_batch_size': 16,
