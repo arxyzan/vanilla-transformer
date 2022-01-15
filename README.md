@@ -31,6 +31,7 @@ python train.py
 
 ### TODO
 - [x] `predict.py` for inference
-- [ ] visualize attentions
-- [ ] add docstrings
-- [ ] an in-depth notebook
+- [ ] Add pretrained weights
+- [ ] Visualize attentions
+- [ ] Add docstrings
+- [ ] An in-depth notebook
