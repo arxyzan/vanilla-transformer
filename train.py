@@ -150,9 +150,6 @@ if __name__ == '__main__':
                               batch_size=batch_size,
                               shuffle=True,
                               collate_fn=Multi30kDe2En.collate_fn)
-    test_loader = DataLoader(val_dataset,
-                             batch_size=batch_size,
-                             collate_fn=Multi30kDe2En.collate_fn)
 
     config['src_vocab_size'] = len(train_dataset.de_vocab)
     config['trg_vocab_size'] = len(train_dataset.en_vocab)
