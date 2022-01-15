@@ -135,12 +135,10 @@ if __name__ == '__main__':
     base_url = config['base_url']
     train_urls = config['train_urls']
     val_urls = config['val_urls']
-    test_urls = config['test_urls']
     batch_size = config['train_batch_size']
 
     train_dataset = Multi30kDe2En(base_url, train_urls)
     val_dataset = Multi30kDe2En(base_url, val_urls)
-    test_dataset = Multi30kDe2En(base_url, test_urls)
 
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
