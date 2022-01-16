@@ -42,7 +42,8 @@ class Transformer(nn.Module):
 
     def trg_mask(self, trg):
         N, trg_len = trg.shape
-        trg_mask = torch.tril(torch.ones((trg_len, trg_len))).expand(N, 1, trg_len, trg_len)
+        trg_pad_mask = (trg != self.trg_pad_idx).unsqueeze(1).unsqueeze(2)
+        trg_mask = torch.tril(torch.ones((trg_len, trg_len))).bool().to(self.device) & trg_pad_mask
         return trg_mask.to(self.device)
 
     def forward(self, src, trg):
@@ -59,6 +60,7 @@ class MultiHeadAttention(nn.Module):
         self.head_dim = embed_dim // n_heads
         self.n_heads = n_heads
         self.embed_dim = embed_dim
+        self.scale = embed_dim ** 0.5
 
         self.keys = nn.Linear(embed_dim, embed_dim)
         self.queries = nn.Linear(embed_dim, embed_dim)
@@ -67,23 +69,23 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, q, k, v, mask=None):
-        N = q.size(0)        # batch_size
-        Q = self.queries(q)  # shape: [N, query_len, embed_dim]
-        K = self.keys(k)     # shape: [N, key_len, embed_dim]
-        V = self.values(v)   # shape: [N, value_len, embed_dim]
+        N = q.size(0)          # batch_size
+        Q = self.queries(q)    # shape: [N, query_len, embed_dim]
+        K = self.keys(k)       # shape: [N, key_len, embed_dim]
+        V = self.values(v)     # shape: [N, value_len, embed_dim]
 
         Q = Q.view(N, -1, self.n_heads, self.head_dim).permute(0, 2, 1, 3)  # shape: [N, n_heads, query_len, head_dim]
         K = K.view(N, -1, self.n_heads, self.head_dim).permute(0, 2, 1, 3)  # shape: [N, n_heads, key_len, head_dim]
         V = V.view(N, -1, self.n_heads, self.head_dim).permute(0, 2, 1, 3)  # shape: [N, n_heads, value_len, head_dim]
 
-        energy = (Q @ K.permute(0, 1, 3, 2)) / self.embed_dim ** 0.5
+        energy = (Q @ K.permute(0, 1, 3, 2)) / self.scale
         if mask is not None:
             energy = energy.masked_fill(mask == 0, -1e20)
 
-        attention = energy.softmax(-1)          # shape: [N, n_heads, query_len, key_len]
-        x = self.dropout(attention) @ V         # shape: [N, n_heads, query_len, key_len]
-        x = x.permute(0, 2, 1, 3).contiguous()  # shape: [N, n_heads, query_len, head_dim]
-        x = x.view(N, -1, self.embed_dim)       # shape: [N, query_len, embed_dim]
+        attention = energy.softmax(-1)           # shape: [N, n_heads, query_len, key_len]
+        x = self.dropout(attention) @ V          # shape: [N, n_heads, query_len, key_len]
+        x = x.permute(0, 2, 1, 3).contiguous()   # shape: [N, query_len, n_heads, head_dim]
+        x = x.view(N, -1, self.embed_dim)        # shape: [N, query_len, embed_dim]
         x = self.proj(x)
 
         return x
@@ -92,15 +94,16 @@ class MultiHeadAttention(nn.Module):
 class EncoderLayer(nn.Module):
     def __init__(self, embed_dim, n_heads, ff_hid_dim, dropout):
         super().__init__()
-        self.norm1 = nn.LayerNorm(embed_dim)
-        self.norm2 = nn.LayerNorm(embed_dim)
         self.attention = MultiHeadAttention(embed_dim, n_heads, dropout)
+        self.norm1 = nn.LayerNorm(embed_dim)
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim, ff_hid_dim * embed_dim),
+            nn.Linear(embed_dim, ff_hid_dim),
             nn.ReLU(),
-            nn.Linear(ff_hid_dim * embed_dim, embed_dim)
+            nn.Dropout(dropout),
+            nn.Linear(ff_hid_dim, embed_dim)
         )
         self.dropout = nn.Dropout(dropout)
+        self.norm2 = nn.LayerNorm(embed_dim)
 
     def forward(self, src, mask):
         attention = self.attention(src, src, src, mask)
@@ -114,6 +117,7 @@ class Encoder(nn.Module):
     def __init__(self, vocab_size, embed_dim, n_blocks, n_heads, ff_hid_dim, max_length, dropout, device):
         super().__init__()
         self.device = device
+        self.scale = embed_dim ** 0.5
         self.tok_emb = nn.Embedding(vocab_size, embed_dim)
         self.pos_emb = nn.Embedding(max_length, embed_dim)
         self.blocks = nn.ModuleList([EncoderLayer(embed_dim, n_heads, ff_hid_dim, dropout)] * n_blocks)
@@ -123,7 +127,7 @@ class Encoder(nn.Module):
         N, seq_len = src.shape
         positions = torch.arange(0, seq_len).expand(N, seq_len).to(self.device)
         pos_embeddings = self.pos_emb(positions)
-        tok_embeddings = self.tok_emb(src)
+        tok_embeddings = self.tok_emb(src) * self.scale
         out = self.dropout(pos_embeddings + tok_embeddings)
 
         for block in self.blocks:
@@ -135,14 +139,15 @@ class Encoder(nn.Module):
 class DecoderLayer(nn.Module):
     def __init__(self, embed_dim, n_heads, ff_hid_dim, dropout):
         super().__init__()
-        self.self_attention = MultiHeadAttention(embed_dim, n_heads, dropout)    # decoder self-attention
+        self.self_attention = MultiHeadAttention(embed_dim, n_heads, dropout)   # decoder self-attention
         self.norm1 = nn.LayerNorm(embed_dim)
-        self.joint_attention = MultiHeadAttention(embed_dim, n_heads, dropout)   # encoder-decoder attention
+        self.joint_attention = MultiHeadAttention(embed_dim, n_heads, dropout)  # encoder-decoder attention
         self.norm2 = nn.LayerNorm(embed_dim)
         self.mlp = nn.Sequential(
-            nn.Linear(embed_dim, ff_hid_dim * embed_dim),
+            nn.Linear(embed_dim, ff_hid_dim),
             nn.ReLU(),
-            nn.Linear(ff_hid_dim * embed_dim, embed_dim)
+            nn.Dropout(dropout),
+            nn.Linear(ff_hid_dim, embed_dim)
         )
         self.norm3 = nn.LayerNorm(embed_dim)
         self.dropout = nn.Dropout(dropout)
@@ -161,6 +166,7 @@ class Decoder(nn.Module):
     def __init__(self, vocab_size, embed_dim, n_blocks, n_heads, ff_hid_dim, max_length, dropout, device):
         super().__init__()
         self.device = device
+        self.scale = embed_dim ** 0.5
         self.tok_embedding = nn.Embedding(vocab_size, embed_dim)
         self.pos_embedding = nn.Embedding(max_length, embed_dim)
         self.dropout = nn.Dropout(dropout)
@@ -171,7 +177,7 @@ class Decoder(nn.Module):
         N, trg_len = trg.shape
         positions = torch.arange(0, trg_len).expand(N, trg_len).to(self.device)
         pos_embeddings = self.pos_embedding(positions)
-        tok_embeddings = self.tok_embedding(trg)
+        tok_embeddings = self.tok_embedding(trg) * self.scale
         trg = self.dropout(pos_embeddings + tok_embeddings)
 
         for block in self.blocks:
@@ -183,8 +189,8 @@ class Decoder(nn.Module):
 
 if __name__ == "__main__":
     torch.random.manual_seed(42)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = 'cpu'
     n_blocks = 6
     embed_dim = 512
     n_heads = 8
@@ -196,8 +202,8 @@ if __name__ == "__main__":
     trg_vocab_size = 20
     src_vocab_size = 20
 
-    src = torch.randint(1, 20, size=(1, 10)).to(device)
-    trg = torch.randint(1, 20, size=(1, 10)).to(device)
+    src = torch.randint(1, 20, size=(16, 10)).to(device)
+    trg = torch.randint(1, 20, size=(16, 10)).to(device)
     print(f'source: {src.cpu().numpy().tolist()}\ntarget: {trg.cpu().numpy().tolist()}')
 
     model = Transformer(src_vocab_size,

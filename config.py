@@ -1,9 +1,9 @@
 config = {
     'name': 'en_de_translation',
-    'embed_dim': 512,
+    'embed_dim': 256,
     'n_blocks': 3,
     'n_heads': 8,
-    'ff_hid_dim': 256,
+    'ff_hid_dim': 512,
     'dropout': 0.1,
     'max_length': 100,
     'device': 'cuda',
@@ -16,7 +16,7 @@ config = {
     'train_urls': ('train.de.gz', 'train.en.gz'),
     'valid_urls': ('val.de.gz', 'val.en.gz'),
     'test_urls': ('test_2016_flickr.de.gz', 'test_2016_flickr.en.gz'),
-    'train_batch_size': 16,
+    'train_batch_size': 12,
     'val_batch_size': 16,
     'epochs': 20
 }
