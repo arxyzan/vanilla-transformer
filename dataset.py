@@ -28,8 +28,8 @@ class Multi30kDe2En(Dataset):
         return len(self.en_texts)
 
     def __getitem__(self, index):
-        de_text = self.de_texts[index]
-        en_text = self.en_texts[index]
+        de_text = self.de_texts[index].rstrip("\n")
+        en_text = self.en_texts[index].rstrip("\n")
         de_tensor = torch.tensor([self.de_vocab[token] for token in self.de_tokenizer(de_text)], dtype=torch.long)
         en_tensor = torch.tensor([self.en_vocab[token] for token in self.en_tokenizer(en_text)], dtype=torch.long)
         return de_tensor, en_tensor
