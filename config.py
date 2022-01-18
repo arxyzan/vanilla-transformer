@@ -14,5 +14,5 @@ config = {
     'save_interval': 1,
     'train_batch_size': 128,
     'val_batch_size': 128,
-    'epochs': 20
+    'epochs': 12
 }

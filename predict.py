@@ -67,7 +67,7 @@ if __name__ == '__main__':
     trg_pad_idx = config['trg_pad_idx']
     lr = config['lr']
     clip = config['clip']
-    weights_path = 'weights/9.pt'
+    weights_path = 'weights/7.pt'
 
     model = Transformer(src_vocab_size,
                         trg_vocab_size,
@@ -81,9 +81,10 @@ if __name__ == '__main__':
                         dropout,
                         device)
     model.to(device)
+    model.load_state_dict(torch.load(weights_path, map_location=device))
 
-    sentence = 'Ein schneller brauner Fuchs springt.'
+    sentence = 'Eine Gruppe von Menschen steht vor einem Iglu .'
 
     output = translate_sentence(sentence, model, de_vocab, en_vocab, device=device)
-    print(f'Translation: {output}')
+    print(f'Translation: {" ".join(output)}')
 
