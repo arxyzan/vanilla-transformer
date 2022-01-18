@@ -12,6 +12,7 @@ from model import Transformer
 from utils import AverageMeter
 from config import config
 from dataset import Multi30kDe2En
+
 SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
