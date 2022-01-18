@@ -47,9 +47,7 @@ def translate_sentence(sentence: Union[list, str], model: Transformer, src_vocab
 
 
 if __name__ == '__main__':
-    base_url = config['base_url']
-    train_urls = config['train_urls']
-    dataset = Multi30kDe2En(base_url, train_urls)
+    dataset = Multi30kDe2En('train')
     de_vocab = dataset.de_vocab
     en_vocab = dataset.en_vocab
     config['src_vocab_size'] = len(dataset.de_vocab)
@@ -69,7 +67,7 @@ if __name__ == '__main__':
     trg_pad_idx = config['trg_pad_idx']
     lr = config['lr']
     clip = config['clip']
-    weights_path = 'weights/10.pt'
+    weights_path = 'weights/9.pt'
 
     model = Transformer(src_vocab_size,
                         trg_vocab_size,
@@ -84,7 +82,7 @@ if __name__ == '__main__':
                         device)
     model.to(device)
 
-    sentence = 'Ein schneller brauner Fuchs springt'
+    sentence = 'Ein schneller brauner Fuchs springt.'
 
     output = translate_sentence(sentence, model, de_vocab, en_vocab, device=device)
     print(f'Translation: {output}')
