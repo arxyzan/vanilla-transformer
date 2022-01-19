@@ -67,7 +67,7 @@ if __name__ == '__main__':
     trg_pad_idx = config['trg_pad_idx']
     lr = config['lr']
     clip = config['clip']
-    weights_path = 'weights/7.pt'
+    weights_path = 'weights/transformer.pt'
 
     model = Transformer(src_vocab_size,
                         trg_vocab_size,
