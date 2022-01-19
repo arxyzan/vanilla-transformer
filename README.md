@@ -40,7 +40,7 @@ Output
 
 ### TODO
 - [x] `predict.py` for inference
-- [ ] Add pretrained weights
+- [x] Add pretrained weights
 - [ ] Visualize attentions
 - [ ] Add docstrings
 - [ ] An in-depth notebook
