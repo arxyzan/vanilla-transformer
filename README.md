@@ -21,13 +21,22 @@ pip install -r requirements.txt
 python -m spacy download de_core_news_sm
 python -m spacy download en_core_web_sm
 ```
+**Note:** _This code uses Torchtext's new API (v0.10.0+) and the `dataset.py` contains a custom text dataset class inherited from `torch.utils.data.Dataset` and is different from the classic methods using `Field` and `BucketIterator` (which are now moved to `torchtext.legacy`). Nevertheless `torchtext` library is still under heavy development so this code will probably break with the upcoming versions._
 
 ### Train
 In `train.py` we train a simple German -> English translation model on Multi30k dataset using the Transformer model. Make sure you configure the necessary paths for weights, logs, etc in `config.py`. Then you can simply run the file as below:
 ```python
 python train.py
 ```
-**Note:** _This code uses Torchtext's new API (v0.10.0+) and the `dataset.py` contains a custom text dataset class inherited from `torch.utils.data.Dataset` and is different from the classic methods using `Field` and `BucketIterator` (which are now moved to `torchtext.legacy`). Nevertheless `torchtext` library is still under heavy development so this code will probably break with the upcoming versions._
+### Inference
+Given the sentence `Eine Gruppe von Menschen steht vor einem Iglu` as input in `predict.py` we get the following output which is pretty decent despite that our Transformer model is roughly complex and our dataset is fairly simple.
+```bash
+python predict.py
+```
+Output
+```bash
+"Translation:  A group of people standing in front of a warehouse ."
+```
 
 ### TODO
 - [x] `predict.py` for inference
