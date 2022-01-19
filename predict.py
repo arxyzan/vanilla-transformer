@@ -26,24 +26,24 @@ def translate_sentence(sentence: Union[list, str], model: Transformer, src_vocab
     with torch.no_grad():
         src_encoded = model.encoder(src_tensor, src_mask)
 
-    trg_indices = [trg_vocab['<bos>']]  # an empty target sentence to be filled in the following loop
+    trg_indexes = [trg_vocab['<bos>']]  # an empty target sentence to be filled in the following loop
 
     for i in range(max_len):
-        trg_tensor = torch.LongTensor(trg_indices).unsqueeze(0).to(device)
+        trg_tensor = torch.LongTensor(trg_indexes).unsqueeze(0).to(device)
         trg_mask = model.trg_mask(trg_tensor).to(device)
 
         with torch.no_grad():
             output = model.decoder(trg_tensor, src_encoded, trg_mask, src_mask)
 
         pred_token = output.argmax(2)[:, -1].item()
-        trg_indices.append(pred_token)
+        trg_indexes.append(pred_token)
 
         if pred_token == trg_vocab['<eos>']:
             break
 
-    output_tokens = trg_vocab.lookup_tokens(trg_indices)
+    output_tokens = trg_vocab.lookup_tokens(trg_indexes)
 
-    return output_tokens[1:]
+    return output_tokens
 
 
 if __name__ == '__main__':
@@ -83,8 +83,8 @@ if __name__ == '__main__':
     model.to(device)
     model.load_state_dict(torch.load(weights_path, map_location=device))
 
-    sentence = 'Eine Gruppe von Menschen steht vor einem Iglu .'
+    sentence = 'Eine Gruppe von Menschen steht vor einem Iglu'
 
     output = translate_sentence(sentence, model, de_vocab, en_vocab, device=device)
-    print(f'Translation: {" ".join(output)}')
+    print(f'Translation: {" ".join(output)}'.replace('<bos>', '').replace('<eos', ''))
 
