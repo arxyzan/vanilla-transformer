@@ -71,7 +71,7 @@ Saved Model at weights/10.pt
 
 ```
 ### Inference
-Given the sentence `Eine Gruppe von Menschen steht vor einem Iglu` as input in `predict.py` we get the following output which is pretty decent despite that our Transformer model is roughly complex and our dataset is fairly simple.
+Given the sentence `Eine Gruppe von Menschen steht vor einem Iglu` as input in `predict.py` we get the following output which is pretty decent even though our dataset is somewhat naive & simple.
 ```bash
 python predict.py
 ```
@@ -83,5 +83,4 @@ python predict.py
 - [x] `predict.py` for inference
 - [x] Add pretrained weights
 - [ ] Visualize attentions
-- [ ] Add docstrings
 - [ ] An in-depth notebook
